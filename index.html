@@ -159,6 +159,17 @@ details.gl p { margin-top: 8px; color: var(--muted); }
  .note{line-height:1.72} .note p{margin:8px 0} .note h3{margin-top:22px} .formula.chemical,.reaction{font-family:Cambria,"STIX Two Text","Times New Roman",serif;font-size:1.32rem;font-weight:400;line-height:1.65;overflow-wrap:anywhere;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-left:3px solid var(--chem);padding:12px 15px;border-radius:12px;margin:10px 0;white-space:normal} .reaction b{font-family:var(--font-body);font-size:.92rem;font-weight:800;display:block} .reaction span{display:block} 
 </style>
 
+<style>
+/* XBR 2.8.3 — adaptive safe areas */
+:root{padding:0;--x-top:max(env(safe-area-inset-top,0px),calc(var(--tg-safe-area-inset-top,0px) + var(--tg-content-safe-area-inset-top,0px)));--x-bottom:max(env(safe-area-inset-bottom,0px),calc(var(--tg-safe-area-inset-bottom,0px) + var(--tg-content-safe-area-inset-bottom,0px)));--x-left:max(env(safe-area-inset-left,0px),calc(var(--tg-safe-area-inset-left,0px) + var(--tg-content-safe-area-inset-left,0px)));--x-right:max(env(safe-area-inset-right,0px),calc(var(--tg-safe-area-inset-right,0px) + var(--tg-content-safe-area-inset-right,0px)));background:var(--bg);scroll-padding:calc(var(--x-top) + 12px) 0 calc(var(--x-bottom) + 100px);}
+body{padding:var(--x-top) max(12px,var(--x-right)) 0 max(12px,var(--x-left));min-width:0;overflow-wrap:anywhere;-webkit-text-size-adjust:100%;}
+.app,.login{min-height:0;max-width:640px;}.app{padding-bottom:calc(88px + var(--x-bottom));}.login{min-height:calc(100vh - var(--x-top) - var(--x-bottom));min-height:calc(100dvh - var(--x-top) - var(--x-bottom));max-width:440px;}
+.tabs{padding:6px max(6px,var(--x-right)) calc(6px + var(--x-bottom)) max(6px,var(--x-left));}.tabs nav{max-width:640px;scrollbar-width:none;}.tabs nav::-webkit-scrollbar{display:none}.tabs nav button{flex:1 0 48px;min-width:48px;font-size:10px;min-height:48px;white-space:nowrap;}.tabs button svg{width:20px;height:20px;}
+.toast{bottom:calc(82px + var(--x-bottom));max-width:calc(100% - 24px)}.row>*{min-width:0}.who{flex-wrap:wrap;justify-content:flex-end}.brand{flex-shrink:0}.card,.stack,.note{min-width:0}.note svg{max-width:100%;height:auto}input,textarea,select{max-width:100%;font-size:16px!important}button{touch-action:manipulation}.btn,.opt,.back,.ghost,.seg button{min-height:44px}.formula,.reaction{overflow-wrap:anywhere}.top{padding-top:8px}.stat3 .num{font-size:clamp(1rem,5vw,1.5rem)}
+:root.x-keyboard .tabs{display:none}:root.x-keyboard .app{padding-bottom:20px}:root.x-keyboard .toast{bottom:12px}
+@media(max-width:370px){.top{gap:6px}.brand svg{width:30px;height:30px}.who .n{max-width:70px}.card{padding:12px}.stat3{gap:5px}.stat3 .card{padding:8px}.tabs nav button{flex-basis:48px}.grid2{gap:8px}}
+@media(min-width:800px){body{padding-left:max(28px,var(--x-left));padding-right:max(28px,var(--x-right))}.app{max-width:960px}.tabs nav{max-width:960px}.tabs nav button{font-size:13px;min-height:52px}.note{max-width:850px;margin-inline:auto;width:100%}.hero{padding:26px}.card{padding:20px}.top{padding-block:16px}.who .n{max-width:220px}.login{max-width:480px}}
+</style>
 <div id="root"></div>
 <div id="toast" class="toast" hidden></div>
 
@@ -393,7 +404,14 @@ GLOSS = GLOSS.concat([["chem", "Атом и электронные конфиг�
 
   /* ---------- Storage layer: shared db when granted, otherwise this device only ---------- */
   var tg = window.Telegram && window.Telegram.WebApp;
-  if(tg){tg.ready();tg.expand();}
+  if(tg){
+    var xRoot=document.documentElement;
+    function xChrome(){try{if(tg.colorScheme==='dark'||tg.colorScheme==='light')xRoot.dataset.theme=tg.colorScheme;var bg=getComputedStyle(xRoot).getPropertyValue('--bg').trim();if(tg.isVersionAtLeast('6.1')){tg.setBackgroundColor(bg);tg.setHeaderColor(tg.isVersionAtLeast('6.9')?bg:'bg_color');}if(tg.isVersionAtLeast('7.10')&&typeof tg.setBottomBarColor==='function')tg.setBottomBarColor(bg);}catch(e){}}
+    function xFullscreen(){try{if(tg.isVersionAtLeast('8.0')&&typeof tg.requestFullscreen==='function'&&!tg.isFullscreen)tg.requestFullscreen();}catch(e){}}
+    try{tg.onEvent('themeChanged',xChrome);tg.onEvent('fullscreenFailed',function(){try{tg.expand();}catch(e){}});tg.onEvent('fullscreenChanged',xChrome);}catch(e){}
+    xChrome();try{tg.ready();tg.expand();}catch(e){} xFullscreen();
+  }
+  (function(){var vv=window.visualViewport,rootEl=document.documentElement;function update(){var el=document.activeElement,editing=el&&(/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)||el.isContentEditable);rootEl.classList.toggle('x-keyboard',!!(editing&&vv&&window.innerHeight-vv.height>110));}if(vv){vv.addEventListener('resize',update);vv.addEventListener('scroll',update);}document.addEventListener('focusin',update);document.addEventListener('focusout',function(){setTimeout(update,100);});window.addEventListener('resize',update);})();
   var cloudMe = null;
   async function api(op, args) {
     if(!window.XBR_API || window.XBR_API.includes('PROJECT_REF')) throw new Error('Администратор ещё не подключил Supabase.');
@@ -468,7 +486,7 @@ GLOSS = GLOSS.concat([["chem", "Атом и электронные конфиг�
     catch(e){S.auth.err=e.message;renderLogin();}
   }
   function renderLogin(){
-    root.innerHTML='<div class="login"><div class="logo">'+LOGO+'</div><h1>XBR 2.4+</h1><p class="muted">Химия и биология • ЕГЭ 2027 • Telegram Edition</p>'+(S.auth.err?'<div class="err">'+esc(S.auth.err)+'</div>':'')+(cloudMe&&cloudMe.role==='new'?'<div class="card stack"><h3>Привет, '+esc(cloudMe.name)+'!</h3><p>Введи код приглашения преподавателя.</p><input type="text" id="invite" autocomplete="off" placeholder="Код приглашения"><button class="btn" id="join">Присоединиться</button><p class="small muted">Имя и Telegram ID используются для сохранения результатов и доступа преподавателя.</p><p class="small muted">Ваш Telegram ID: '+esc(cloudMe.telegramId)+'</p></div>':'<button class="btn" id="connect">Войти через Telegram</button>')+'<p class="small muted">Данные хранятся в облаке. Пароль Telegram не нужен.</p></div>';
+    root.innerHTML='<div class="login"><div class="logo">'+LOGO+'</div><h1>XBR 2.8.3</h1><p class="muted">Химия и биология • ЕГЭ 2027 • Telegram Edition</p>'+(S.auth.err?'<div class="err">'+esc(S.auth.err)+'</div>':'')+(cloudMe&&cloudMe.role==='new'?'<div class="card stack"><h3>Привет, '+esc(cloudMe.name)+'!</h3><p>Введи код приглашения преподавателя.</p><input type="text" id="invite" autocomplete="off" placeholder="Код приглашения"><button class="btn" id="join">Присоединиться</button><p class="small muted">Имя и Telegram ID используются для сохранения результатов и доступа преподавателя.</p><p class="small muted">Ваш Telegram ID: '+esc(cloudMe.telegramId)+'</p></div>':'<button class="btn" id="connect">Войти через Telegram</button>')+'<p class="small muted">Данные хранятся в облаке. Пароль Telegram не нужен.</p></div>';
     if($('connect'))$('connect').onclick=connect;
     if($('join'))$('join').onclick=async function(){var code=$('invite').value.trim();this.disabled=true;try{await api('join',{code:code});await connect();}catch(e){S.auth.err=e.message;renderLogin();}};
   }
