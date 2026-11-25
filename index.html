@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><script src="https://telegram.org/js/telegram-web-app.js"></script><script src="config.js"></script><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><script src="https://telegram.org/js/telegram-web-app.js"></script><script src="config.js"></script><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}select,input[type=date],input[type=number],input[type=file]{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:inherit} label{display:block} .tabs button{font-size:.62rem}</style></head><body>
 <title>XBR</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700&display=swap">
@@ -465,7 +465,7 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     if(!window.XBR_API || window.XBR_API.includes('PROJECT_REF')) throw new Error('Администратор ещё не подключил Supabase.');
     if(!tg || !tg.initData) throw new Error('Откройте XBR через кнопку в Telegram.');
     var response=await fetch(window.XBR_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({op:op,initData:tg.initData},args||{}))});
-    var result=await response.json(); if(!response.ok) throw new Error(result.error||'Ошибка подключения'); return result;
+    var result=JSON.parse(new TextDecoder("utf-8").decode(await response.arrayBuffer())); if(!response.ok) throw new Error(result.error||'Ошибка подключения'); return result;
   }
   var store = {mode:'shared',get:async function(path){return (await api('get',{path:path})).data;},set:function(path,data){return api('set',{path:path,data:data});},watch:function(col,field,val,cb,err){var stopped=false,busy=false;async function poll(){if(stopped||busy)return;busy=true;try{var r=await api('list',{col:col,field:field,val:val});if(!stopped)cb(r.data);}catch(e){if(!stopped&&err)err(e);}finally{busy=false;}}poll();var timer=setInterval(poll,12000);return function(){stopped=true;clearInterval(timer);};}};
   /* ---------- State ---------- */
@@ -534,7 +534,7 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     catch(e){S.auth.err=e.message;renderLogin();}
   }
   function renderLogin(){
-    root.innerHTML='<div class="login"><div class="logo">'+LOGO+'</div><h1>XBR 2.0</h1><p class="muted">Химия и биология • ЕГЭ 2027 • Telegram Edition</p>'+(S.auth.err?'<div class="err">'+esc(S.auth.err)+'</div>':'')+(cloudMe&&cloudMe.role==='new'?'<div class="card stack"><h3>Привет, '+esc(cloudMe.name)+'!</h3><p>Введи код приглашения преподавателя.</p><input type="text" id="invite" autocomplete="off" placeholder="Код приглашения"><button class="btn" id="join">Присоединиться</button><p class="small muted">Имя и Telegram ID используются для сохранения результатов и доступа преподавателя.</p><p class="small muted">Ваш Telegram ID: '+esc(cloudMe.telegramId)+'</p></div>':'<button class="btn" id="connect">Войти через Telegram</button>')+'<p class="small muted">Данные хранятся в облаке. Пароль Telegram не нужен.</p></div>';
+    root.innerHTML='<div class="login"><div class="logo">'+LOGO+'</div><h1>XBR 2.1</h1><p class="muted">Химия и биология • ЕГЭ 2027 • Telegram Edition</p>'+(S.auth.err?'<div class="err">'+esc(S.auth.err)+'</div>':'')+(cloudMe&&cloudMe.role==='new'?'<div class="card stack"><h3>Привет, '+esc(cloudMe.name)+'!</h3><p>Введи код приглашения преподавателя.</p><input type="text" id="invite" autocomplete="off" placeholder="Код приглашения"><button class="btn" id="join">Присоединиться</button><p class="small muted">Имя и Telegram ID используются для сохранения результатов и доступа преподавателя.</p><p class="small muted">Ваш Telegram ID: '+esc(cloudMe.telegramId)+'</p></div>':'<button class="btn" id="connect">Войти через Telegram</button>')+'<p class="small muted">Данные хранятся в облаке. Пароль Telegram не нужен.</p></div>';
     if($('connect'))$('connect').onclick=connect;
     if($('join'))$('join').onclick=async function(){var code=$('invite').value.trim();this.disabled=true;try{await api('join',{code:code});await connect();}catch(e){S.auth.err=e.message;renderLogin();}};
   }
@@ -548,10 +548,11 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     var t = S.me.role === "teacher" ? '<span class="chip">учитель</span>' : "";
     return '<header class="top"><div class="brand">' + LOGO + 'XBR</div><div class="who"><div class="avatar">' + esc(S.me.name.charAt(0).toUpperCase()) + '</div><span class="n">' + esc(S.me.name) + '</span>' + t + '<button class="ghost" id="out">Выйти</button></div></header>';
   }
+  ICON.assign = ICON.hw;
   function tabs() {
     var t = S.me.role === "teacher"
-      ? [["students", "Ученики"], ["notes", "Конспекты"], ["gloss", "Словарь"]]
-      : [["home", "Главная"], ["notes", "Конспекты"], ["tests", "Тесты"], ["hw", "ДЗ"], ["gloss", "Словарь"]];
+      ? [["students", "Ученики"], ["assign", "Задания"], ["notes", "Конспекты"], ["gloss", "Словарь"]]
+      : [["home", "Главная"], ["notes", "Конспекты"], ["tests", "Тесты"], ["hw", "ДЗ"], ["assign", "Учитель"], ["gloss", "Словарь"]];
     return '<div class="tabs"><nav>' + t.map(function (x) { return '<button data-tab="' + x[0] + '" class="' + (S.tab === x[0] ? "on" : "") + '">' + ICON[x[0]] + x[1] + '</button>'; }).join("") + '</nav></div>';
   }
   function filter() {
@@ -681,6 +682,7 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     if (!p) { S.view = null; return vStudents(); }
     var st = stats(p);
     var h = '<div class="stack"><button class="back" id="bk">← Все ученики</button><h1>' + esc(p.name) + '</h1><p class="muted small">Последняя активность: ' + fmtDate(p.updated) + '</p>';
+    h += '<button class="btn alt" id="rename-student">Изменить имя ученика</button>';
     h += '<div class="hero"><span class="label">Общий прогресс</span><span class="num" style="font-size:2.4rem">' + st.all + '%</span><div class="bar"><i style="width:' + st.all + '%"></i></div></div>';
     ["chem", "bio"].forEach(function (s) {
       var x = st[s];
@@ -704,19 +706,22 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
 
   /* ---------- Render + events ---------- */
   function isEditing() { var a = document.activeElement; return a && (a.tagName === "TEXTAREA" || a.tagName === "INPUT") && root.contains(a); }
-  function rerender() { if (!S.me) return; if (isEditing()) { rerender.p = true; return; } render(); }
+  function rerender() { if (!S.me || S.tab === "assign") return; if (isEditing()) { rerender.p = true; return; } render(); }
   function render() {
     if (!S.me) { renderLogin(); return; }
     var T = S.me.role === "teacher", body;
-    if (T) body = S.tab === "students" ? vStudents() : S.tab === "notes" ? vNotes() : vGloss();
+    if (S.tab === "assign") body = vAssign();
+    else if (T) body = S.tab === "students" ? vStudents() : S.tab === "notes" ? vNotes() : vGloss();
     else body = S.tab === "home" ? vHome() : S.tab === "notes" ? vNotes() : S.tab === "tests" ? vTests() : S.tab === "hw" ? vHw() : vGloss();
     root.innerHTML = '<div class="app">' + top() + body + '</div>' + tabs();
     bind();
   }
-  function go(tab) { S.tab = tab; S.view = null; S.quiz = null; render(); window.scrollTo(0, 0); }
+  function go(tab) { if(tab==="assign"){A.view=null;A.error="";A.items=null;loadAssignments();} S.tab = tab; S.view = null; S.quiz = null; render(); window.scrollTo(0, 0); }
   function on(sel, fn) { var els = root.querySelectorAll(sel); for (var i = 0; i < els.length; i++) els[i].addEventListener("click", fn); }
 
   function bind() {
+    if(S.tab==="assign") bindAssign();
+    on("#rename-student", async function(){var name=prompt("Новое имя ученика");if(!name)return;try{await api("rename_student",{sid:S.view,name:name});toast("Имя сохранено");}catch(e){toast(e.message);}});
     on("#out", logout);
     on("[data-tab]", function () { go(this.getAttribute("data-tab")); });
     on("[data-sub]", function () { S.sub = this.getAttribute("data-sub"); render(); });
@@ -762,6 +767,30 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     document.querySelectorAll("textarea, input").forEach(function (el) {
       el.addEventListener("blur", function () { if (rerender.p) { rerender.p = false; setTimeout(function () { if (!isEditing()) render(); }, 150); } });
     });
+  }
+
+
+  var A={items:null,view:null,work:null,error:'',busy:false,photo:''};
+  async function loadAssignments(){try{A.items=(await api('assign_list')).data;A.error='';}catch(e){A.error=e.message;}if(S.me&&S.tab==='assign'&&!A.view)render();}
+  function aStatus(w){return !w?'Не сдано':w.status==='ok'?'Проверено':w.status==='again'?'На доработку':'На проверке';}
+  function aPhoto(w){return w&&/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(w.photo||'')?'<img alt="Фото решения" style="width:100%;border-radius:12px" src="'+esc(w.photo)+'">':'';}
+  function vAssign(){var teacher=S.me.role==='teacher',a=A.items&&A.items.find(function(x){return x.id===A.view;});
+    var html='<div class="stack"><h1>Задания преподавателя</h1>'+(A.error?'<div class="err">'+esc(A.error)+'</div>':'');
+    if(A.view==='new')return html+'<button class="back" id="a-back">← К заданиям</button><div class="card stack"><label>Название<input type="text" id="a-title" maxlength="120"></label><label>Предмет<select id="a-subject"><option value="chem">Химия</option><option value="bio">Биология</option></select></label><label>Кому<select id="a-target"><option value="all">Всем моим ученикам</option>'+S.students.map(function(p){return '<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>';}).join('')+'</select></label><label>Срок сдачи<input type="date" id="a-due"></label><label>Условие<textarea id="a-text" maxlength="12000"></textarea></label><button class="btn" id="a-create">Назначить</button></div></div>';
+    if(a){html+='<button class="back" id="a-back">← К заданиям</button><div class="card stack">'+chip(a.subject)+'<h2>'+esc(a.title)+'</h2><p class="muted">Срок: '+esc(a.due)+'</p><p style="white-space:pre-wrap">'+esc(a.text)+'</p></div>';
+      if(A.busy)return html+'<p>Загрузка…</p></div>';
+      if(teacher){var works=Array.isArray(A.work)?A.work:[];html+='<h2>Сданные работы · '+works.length+'</h2>';if(!works.length)html+='<p class="muted">Пока нет решений.</p>';works.forEach(function(w,i){html+='<div class="card stack"><h3>'+esc((S.students.find(function(p){return p.id===w.sid;})||w).name)+'</h3><span class="chip">'+aStatus(w)+'</span><p style="white-space:pre-wrap">'+esc(w.answer)+'</p>'+aPhoto(w)+'<label>Баллы (0–100)<input type="number" min="0" max="100" id="a-score-'+i+'" value="'+esc(w.score??'')+'"></label><textarea id="a-comment-'+i+'" placeholder="Комментарий">'+esc(w.comment||'')+'</textarea><div class="row"><button class="btn bio sm" data-a-review="'+i+'" data-status="ok">Проверено</button><button class="btn sm" data-a-review="'+i+'" data-status="again">Доработать</button></div></div>';});}
+      else{var w=A.work;html+='<div class="card stack"><span class="chip">'+aStatus(w)+'</span>'+(w?'<p style="white-space:pre-wrap">'+esc(w.answer)+'</p>'+aPhoto(w)+(w.score!==undefined?'<h3>Баллы: '+esc(w.score)+'/100</h3><p>'+esc(w.comment||'')+'</p>':''):'');if(!w||w.status==='again')html+='<textarea id="a-answer" placeholder="Текст решения">'+esc(w?w.answer:'')+'</textarea><label>Фото решения (необязательно)<input id="a-file" type="file" accept="image/*"></label><p id="a-photo-status" class="muted small"></p><button class="btn" id="a-submit">Сдать работу</button>';html+='</div>';}
+      return html+'</div>';}
+    if(teacher)html+='<button class="btn" id="a-new">＋ Создать домашнее задание</button>';html+='<button class="btn alt" id="a-refresh">Обновить список</button>';
+    if(!A.items)return html+'<p>Загрузка…</p></div>';if(!A.items.length)html+='<div class="card">Пока нет назначенных заданий.</div>';
+    return html+A.items.slice().sort(function(a,b){return b.created.localeCompare(a.created);}).map(function(a){return '<button class="item" data-a-open="'+esc(a.id)+'">'+tile(a.subject)+'<span class="t"><b>'+esc(a.title)+'</b><small>До '+esc(a.due)+(teacher?' · '+(a.target==='all'?'Вся группа':'Индивидуальное'):'')+'</small></span></button>';}).join('')+'</div>';}
+  async function aOpen(id){A.view=id;A.work=null;A.photo='';A.busy=true;A.error='';render();try{var r=await api('assign_work',{aid:id});if(A.view!==id)return;A.work=r.data;}catch(e){A.error=e.message;}finally{if(A.view===id){A.busy=false;if(S.tab==='assign')render();}}}
+  function bindAssign(){on('#a-new',function(){A.view='new';A.error='';render();});on('#a-back',function(){A.view=null;A.error='';loadAssignments();render();});on('#a-refresh',loadAssignments);on('[data-a-open]',function(){aOpen(this.dataset.aOpen);});
+    on('#a-create',async function(){var button=this;button.disabled=true;try{await api('assign_create',{title:$('a-title').value,text:$('a-text').value,subject:$('a-subject').value,target:$('a-target').value,due:$('a-due').value});A.view=null;await loadAssignments();toast('Задание назначено');}catch(e){toast(e.message);button.disabled=false;}});
+    var f=$('a-file');if(f)f.onchange=async function(){A.photo='';var status=$('a-photo-status'),button=$('a-submit');if(!f.files.length)return;button.disabled=true;try{var file=f.files[0];if(file.size>20000000)throw Error('Фото слишком большое');var url=URL.createObjectURL(file);try{var img=new Image();img.src=url;await img.decode();var c=document.createElement('canvas'),scale=Math.min(1,1400/Math.max(img.width,img.height));c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));var ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);for(var q=.85;q>=.2;q-=.1){var v=c.toDataURL('image/jpeg',q);if(v.length<=500000){A.photo=v;break;}}if(!A.photo)throw Error('Не удалось сжать фото');status.textContent='Фото готово к отправке';}finally{URL.revokeObjectURL(url);}}catch(e){status.textContent=e.message;}finally{button.disabled=false;}};
+    on('#a-submit',async function(){var button=this,id=A.view;button.disabled=true;try{await api('assign_submit',{aid:id,answer:$('a-answer').value,photo:A.photo});toast('Работа сдана');await aOpen(id);}catch(e){toast(e.message);button.disabled=false;}});
+    on('[data-a-review]',async function(){var i=Number(this.dataset.aReview),w=A.work[i],score=$('a-score-'+i).value,button=this,id=A.view;if(score===''||!Number.isInteger(Number(score))||Number(score)<0||Number(score)>100){toast('Укажите целое число от 0 до 100');return;}button.disabled=true;try{await api('assign_review',{aid:id,sid:w.sid,version:w.version,status:this.dataset.status,score:Number(score),comment:$('a-comment-'+i).value});toast('Оценка сохранена');await aOpen(id);}catch(e){toast(e.message);button.disabled=false;}});
   }
 
   /* ---------- Start ---------- */
