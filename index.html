@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><script src="https://telegram.org/js/telegram-web-app.js"></script><script src="config.js"></script><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}select,input[type=date],input[type=number],input[type=file]{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:inherit} label{display:block} .tabs button{font-size:.62rem}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><script src="https://telegram.org/js/telegram-web-app.js"></script><script src="config.js"></script><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}select,input[type=date],input[type=number],input[type=file]{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:inherit} label{display:block} .tabs button{font-size:.62rem}.ptable{display:grid;grid-template-columns:repeat(18,36px);gap:4px;width:max-content}.el{display:flex;flex-direction:column;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:3px 0}.el small{font-size:9px}.atlasflow{display:grid;justify-items:center;gap:4px}.atlasflow span{background:var(--bio-soft);padding:8px 14px;border-radius:10px;text-align:center;width:100%}</style></head><body>
 <title>XBR</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700&display=swap">
@@ -534,7 +534,7 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     catch(e){S.auth.err=e.message;renderLogin();}
   }
   function renderLogin(){
-    root.innerHTML='<div class="login"><div class="logo">'+LOGO+'</div><h1>XBR 2.1</h1><p class="muted">Химия и биология • ЕГЭ 2027 • Telegram Edition</p>'+(S.auth.err?'<div class="err">'+esc(S.auth.err)+'</div>':'')+(cloudMe&&cloudMe.role==='new'?'<div class="card stack"><h3>Привет, '+esc(cloudMe.name)+'!</h3><p>Введи код приглашения преподавателя.</p><input type="text" id="invite" autocomplete="off" placeholder="Код приглашения"><button class="btn" id="join">Присоединиться</button><p class="small muted">Имя и Telegram ID используются для сохранения результатов и доступа преподавателя.</p><p class="small muted">Ваш Telegram ID: '+esc(cloudMe.telegramId)+'</p></div>':'<button class="btn" id="connect">Войти через Telegram</button>')+'<p class="small muted">Данные хранятся в облаке. Пароль Telegram не нужен.</p></div>';
+    root.innerHTML='<div class="login"><div class="logo">'+LOGO+'</div><h1>XBR 2.2</h1><p class="muted">Химия и биология • ЕГЭ 2027 • Telegram Edition</p>'+(S.auth.err?'<div class="err">'+esc(S.auth.err)+'</div>':'')+(cloudMe&&cloudMe.role==='new'?'<div class="card stack"><h3>Привет, '+esc(cloudMe.name)+'!</h3><p>Введи код приглашения преподавателя.</p><input type="text" id="invite" autocomplete="off" placeholder="Код приглашения"><button class="btn" id="join">Присоединиться</button><p class="small muted">Имя и Telegram ID используются для сохранения результатов и доступа преподавателя.</p><p class="small muted">Ваш Telegram ID: '+esc(cloudMe.telegramId)+'</p></div>':'<button class="btn" id="connect">Войти через Telegram</button>')+'<p class="small muted">Данные хранятся в облаке. Пароль Telegram не нужен.</p></div>';
     if($('connect'))$('connect').onclick=connect;
     if($('join'))$('join').onclick=async function(){var code=$('invite').value.trim();this.disabled=true;try{await api('join',{code:code});await connect();}catch(e){S.auth.err=e.message;renderLogin();}};
   }
@@ -548,11 +548,11 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     var t = S.me.role === "teacher" ? '<span class="chip">учитель</span>' : "";
     return '<header class="top"><div class="brand">' + LOGO + 'XBR</div><div class="who"><div class="avatar">' + esc(S.me.name.charAt(0).toUpperCase()) + '</div><span class="n">' + esc(S.me.name) + '</span>' + t + '<button class="ghost" id="out">Выйти</button></div></header>';
   }
-  ICON.assign = ICON.hw;
+  ICON.assign = ICON.hw; ICON.tools = ICON.gloss;
   function tabs() {
     var t = S.me.role === "teacher"
-      ? [["students", "Ученики"], ["assign", "Задания"], ["notes", "Конспекты"], ["gloss", "Словарь"]]
-      : [["home", "Главная"], ["notes", "Конспекты"], ["tests", "Тесты"], ["hw", "ДЗ"], ["assign", "Учитель"], ["gloss", "Словарь"]];
+      ? [["students", "Ученики"], ["assign", "Задания"], ["notes", "Конспекты"], ["tools", "Инструменты"]]
+      : [["home", "Главная"], ["notes", "Конспекты"], ["tests", "Тесты"], ["hw", "ДЗ"], ["assign", "Учитель"], ["tools", "Инструменты"]];
     return '<div class="tabs"><nav>' + t.map(function (x) { return '<button data-tab="' + x[0] + '" class="' + (S.tab === x[0] ? "on" : "") + '">' + ICON[x[0]] + x[1] + '</button>'; }).join("") + '</nav></div>';
   }
   function filter() {
@@ -710,7 +710,8 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
   function render() {
     if (!S.me) { renderLogin(); return; }
     var T = S.me.role === "teacher", body;
-    if (S.tab === "assign") body = vAssign();
+    if (S.tab === "tools") body = vTools();
+    else if (S.tab === "assign") body = vAssign();
     else if (T) body = S.tab === "students" ? vStudents() : S.tab === "notes" ? vNotes() : vGloss();
     else body = S.tab === "home" ? vHome() : S.tab === "notes" ? vNotes() : S.tab === "tests" ? vTests() : S.tab === "hw" ? vHw() : vGloss();
     root.innerHTML = '<div class="app">' + top() + body + '</div>' + tabs();
@@ -721,6 +722,7 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
 
   function bind() {
     if(S.tab==="assign") bindAssign();
+    if(S.tab==="tools") bindTools();
     on("#rename-student", async function(){var name=prompt("Новое имя ученика");if(!name)return;try{await api("rename_student",{sid:S.view,name:name});toast("Имя сохранено");}catch(e){toast(e.message);}});
     on("#out", logout);
     on("[data-tab]", function () { go(this.getAttribute("data-tab")); });
@@ -734,7 +736,7 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     on("[data-quiz]", function () { S.quiz = { id: this.getAttribute("data-quiz"), i: 0, score: 0, pick: null }; render(); window.scrollTo(0, 0); });
     on("[data-opt]", function () {
       var Q = S.quiz, qz = QUIZ.filter(function (x) { return x.id === Q.id; })[0];
-      Q.pick = +this.getAttribute("data-opt"); if (Q.pick === qz.q[Q.i].a) Q.score++; render();
+      Q.pick = +this.getAttribute("data-opt"); recordError(Q.id,Q.i,Q.pick !== qz.q[Q.i].a); if (Q.pick === qz.q[Q.i].a) Q.score++; render();
     });
     on("#nx", function () {
       var Q = S.quiz, qz = QUIZ.filter(function (x) { return x.id === Q.id; })[0];
@@ -792,6 +794,25 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     on('#a-submit',async function(){var button=this,id=A.view;button.disabled=true;try{await api('assign_submit',{aid:id,answer:$('a-answer').value,photo:A.photo});toast('Работа сдана');await aOpen(id);}catch(e){toast(e.message);button.disabled=false;}});
     on('[data-a-review]',async function(){var i=Number(this.dataset.aReview),w=A.work[i],score=$('a-score-'+i).value,button=this,id=A.view;if(score===''||!Number.isInteger(Number(score))||Number(score)<0||Number(score)>100){toast('Укажите целое число от 0 до 100');return;}button.disabled=true;try{await api('assign_review',{aid:id,sid:w.sid,version:w.version,status:this.dataset.status,score:Number(score),comment:$('a-comment-'+i).value});toast('Оценка сохранена');await aOpen(id);}catch(e){toast(e.message);button.disabled=false;}});
   }
+
+  var U={mode:'menu',subject:'chem',run:null,element:1};
+  var symbols='H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og'.split(' ');
+  var names='Водород Гелий Литий Бериллий Бор Углерод Азот Кислород Фтор Неон Натрий Магний Алюминий Кремний Фосфор Сера Хлор Аргон Калий Кальций Скандий Титан Ванадий Хром Марганец Железо Кобальт Никель Медь Цинк Галлий Германий Мышьяк Селен Бром Криптон Рубидий Стронций Иттрий Цирконий Ниобий Молибден Технеций Рутений Родий Палладий Серебро Кадмий Индий Олово Сурьма Теллур Иод Ксенон Цезий Барий Лантан Церий Празеодим Неодим Прометий Самарий Европий Гадолиний Тербий Диспрозий Гольмий Эрбий Тулий Иттербий Лютеций Гафний Тантал Вольфрам Рений Осмий Иридий Платина Золото Ртуть Таллий Свинец Висмут Полоний Астат Радон Франций Радий Актиний Торий Протактиний Уран Нептуний Плутоний Америций Кюрий Берклий Калифорний Эйнштейний Фермий Менделевий Нобелий Лоуренсий Резерфордий Дубний Сиборгий Борий Хассий Мейтнерий Дармштадтий Рентгений Коперниций Нихоний Флеровий Московий Ливерморий Теннессин Оганесон'.split(' ');
+  var periods=[[1,2],[3,4,5,6,7,8,9,10],[11,12,13,14,15,16,17,18],Array.from({length:18},(_,i)=>19+i),Array.from({length:18},(_,i)=>37+i),[55,56,57,...Array.from({length:15},(_,i)=>72+i)],[87,88,89,...Array.from({length:15},(_,i)=>104+i)]];
+  var atlas=[['Поток генетической информации',['ДНК','иРНК','Белок'],'Транскрипция создаёт РНК на матрице ДНК; трансляция происходит на рибосоме.'],['Кровообращение',['Правый желудочек','Лёгкие','Левое предсердие','Левый желудочек','Органы','Правое предсердие'],'Малый круг начинается в правом желудочке, большой — в левом. Предсердия передают кровь соответствующим желудочкам.'],['Рефлекторная дуга',['Рецептор','Чувствительный нейрон','ЦНС','Двигательный нейрон','Рабочий орган'],'В ЦНС сигнал может передаваться через вставочный нейрон; в моносинаптическом рефлексе он отсутствует.'],['Жизненный цикл цветкового растения',['Спорофит','Мейоз → споры','Гаметофиты','Гаметы','Зигота'],'Гаметофиты гаплоидны; при двойном оплодотворении образуются зигота и обычно триплоидный эндосперм.'],['Энергетический обмен',['Гликолиз','Окисление пирувата','Цикл Кребса','Дыхательная цепь'],'Гликолиз идёт в цитозоле, остальные перечисленные этапы аэробного дыхания эукариот связаны с митохондриями.']];
+  function errorKey(){return 'xbr22:errors:'+S.me.id;}
+  function errors(){try{return JSON.parse(localStorage.getItem(errorKey()))||{};}catch(e){return {};}}
+  function recordError(id,i,wrong){try{var m=errors(),k=id+':'+i;if(wrong)m[k]=1;else delete m[k];localStorage.setItem(errorKey(),JSON.stringify(m));}catch(e){}}
+  function pool(subject,only){var m=errors(),p=[];QUIZ.forEach(z=>{if(subject!=='all'&&z.s!==subject)return;z.q.forEach((q,i)=>{if(!only||m[z.id+':'+i])p.push({id:z.id,i:i,q:q,s:z.s});});});return p;}
+  function startPractice(only){var p=pool(U.subject,only);for(var i=p.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));[p[i],p[j]]=[p[j],p[i]];}U.run={items:p.slice(0,20),i:0,pick:null,score:0};U.mode='practice';render();}
+  function atomCell(n){return '<button class="el" data-element="'+n+'" aria-label="'+names[n-1]+'" style="'+(U.element===n?'outline:2px solid var(--chem);':'')+'"><small>'+n+'</small><b>'+symbols[n-1]+'</b></button>';}
+  function vTools(){var h='<div class="stack"><h1>Учебные инструменты</h1>';if(U.mode==='menu')return h+'<div class="card stack"><h2>Справочники</h2><button class="btn alt" data-tool="periodic">Таблица Менделеева · 118 элементов</button><button class="btn alt" data-tool="atlas">Биология · схемы процессов</button><button class="btn alt" data-tab="gloss">Словарь</button></div>'+(S.me.role==='student'?'<div class="card stack"><h2>Тренажёр</h2><p class="muted">Случайные задания из существующего банка. Не официальный вариант ЕГЭ.</p><select id="u-sub"><option value="chem" '+(U.subject==='chem'?'selected':'')+'>Химия</option><option value="bio" '+(U.subject==='bio'?'selected':'')+'>Биология</option><option value="all" '+(U.subject==='all'?'selected':'')+'>Оба предмета</option></select><button class="btn" id="u-start">Тренировка · до 20 вопросов</button><button class="btn alt" id="u-errors">Работа над ошибками · '+Object.keys(errors()).length+'</button><p class="small muted">Ошибки сохраняются на этом устройстве, отдельно от облачного прогресса.</p></div>':'')+'</div>';
+  h+='<button class="back" data-tool="menu">← К инструментам</button>';
+  if(U.mode==='periodic'){var n=U.element,period=n<=2?1:n<=10?2:n<=18?3:n<=36?4:n<=54?5:n<=86?6:7;h+='<div class="card stack"><h2>'+n+' · '+symbols[n-1]+' — '+names[n-1]+'</h2><p>Заряд ядра: +'+n+'e · электронов в нейтральном атоме: '+n+' · период '+period+'</p><p class="small muted">Нажмите на элемент. Таблицу можно прокручивать вправо.</p></div><div style="overflow-x:auto;padding:4px"><div class="ptable">'+Array.from({length:18},(_,i)=>'<small style="text-align:center">'+(i+1)+'</small>').join('');periods.forEach((r,i)=>{for(var g=1;g<=18;g++){var idx=i===0?(g===1?0:g===18?1:-1):i<3?(g<=2?g-1:g>=13?g-11:-1):g-1;h+=idx>=0?atomCell(r[idx]):'<span></span>';}});h+='</div><p class="small muted">Лантаноиды и актиноиды (вынесенные ряды)</p><div class="ptable" style="grid-template-columns:repeat(14,36px)">'+Array.from({length:14},(_,i)=>atomCell(58+i)).join('')+Array.from({length:14},(_,i)=>atomCell(90+i)).join('')+'</div></div>';}
+  if(U.mode==='atlas'){atlas.forEach(a=>{h+='<div class="card stack"><h2>'+esc(a[0])+'</h2><div class="atlasflow">'+a[1].map(x=>'<span>'+esc(x)+'</span>').join('<b aria-hidden="true">↓</b>')+'</div><p>'+esc(a[2])+'</p></div>';});}
+  if(U.mode==='practice'){var r=U.run;if(!r.items.length)h+='<div class="card">Нет вопросов для повторения в выбранном предмете.</div>';else if(r.i===r.items.length)h+='<div class="hero"><h2>Тренировка завершена</h2><span class="num">'+r.score+' / '+r.items.length+'</span><p>Это результат тренировки, а не балл ЕГЭ.</p></div><button class="btn" id="u-errors">Повторить ошибки</button>';else{var item=r.items[r.i],q=item.q;h+='<div class="row"><span class="label">'+(r.i+1)+' / '+r.items.length+'</span>'+chip(item.s)+'</div><h2>'+esc(q.t)+'</h2>'+q.o.map((o,i)=>'<button class="opt'+(r.pick!==null?(i===q.a?' right':i===r.pick?' wrong':''):'')+'" data-u-opt="'+i+'" '+(r.pick!==null?'disabled':'')+'>'+esc(o)+'</button>').join('')+(r.pick!==null?'<div class="info">'+esc(q.ex||('Правильный ответ: '+q.o[q.a]))+'</div><button class="btn" id="u-next">Дальше</button>':'');}}
+  return h+'</div>';}
+  function bindTools(){on('[data-tool]',function(){U.mode=this.dataset.tool;render();});on('[data-element]',function(){U.element=Number(this.dataset.element);render();});var sub=$('u-sub');if(sub)sub.onchange=()=>{U.subject=sub.value;};on('#u-start',()=>startPractice(false));on('#u-errors',()=>startPractice(true));on('[data-u-opt]',function(){var r=U.run,item=r.items[r.i];if(r.pick!==null)return;r.pick=Number(this.dataset.uOpt);var correct=r.pick===item.q.a;if(correct)r.score++;recordError(item.id,item.i,!correct);render();});on('#u-next',()=>{U.run.i++;U.run.pick=null;render();});}
 
   /* ---------- Start ---------- */
   renderLogin();
