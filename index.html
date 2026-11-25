@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><script src="https://telegram.org/js/telegram-web-app.js"></script><script src="config.js"></script><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>XBR</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;700&display=swap">
@@ -164,10 +164,10 @@ details.gl p { margin-top: 8px; color: var(--muted); }
 (function () {
   "use strict";
 
-  /* ---------- Teachers (password hashes, SHA-256 of "xbr:<id>:<password>") ---------- */
+  /* ---------- Teacher display names; roles verified on server ---------- */
   var TEACH = {
-    liza: { name: "Елизавета", hash: "87b45feb359b3d7e1913097e023a75dbe39febca09a8f401421f9c5b1bf22fc3" },
-    max:  { name: "Максим",    hash: "3df73ec6b40688976ec3ddfbed223ffe0012e30d46c53719acb528a51dd99d6d" }
+    liza: { name: "Елизавета" },
+    max:  { name: "Максим" }
   };
   var SUBJ = { chem: "Химия", bio: "Биология" };
 
@@ -458,55 +458,16 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     '<circle cx="21.5" cy="14.5" r="1.1" fill="#F5E1AC"/><circle cx="26.5" cy="16" r=".9" fill="#F5E1AC"/></svg>';
 
   /* ---------- Storage layer: shared db when granted, otherwise this device only ---------- */
-  var store = null;
-  function makeDbStore(db) {
-    return {
-      mode: "shared",
-      get: async function (path) { var s = await db.doc(path).get(); return s.exists ? Object.assign({ id: s.id }, s.data()) : null; },
-      set: function (path, data) { return db.doc(path).set(data); },
-      claim: async function (path) {
-        var r = await db.doc(path).acquire({ holder: "c" + Math.random().toString(36).slice(2), ttlMs: 8000 });
-        return !!r.acquired;
-      },
-      watch: function (col, field, val, cb, err) {
-        var q = db.collection(col).where(field, "==", val);
-        return q.onSnapshot(function (s) { cb(s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); })); }, err);
-      }
-    };
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if(tg){tg.ready();tg.expand();}
+  var cloudMe = null;
+  async function api(op, args) {
+    if(!window.XBR_API || window.XBR_API.includes('PROJECT_REF')) throw new Error('Администратор ещё не подключил Supabase.');
+    if(!tg || !tg.initData) throw new Error('Откройте XBR через кнопку в Telegram.');
+    var response=await fetch(window.XBR_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({op:op,initData:tg.initData},args||{}))});
+    var result=await response.json(); if(!response.ok) throw new Error(result.error||'Ошибка подключения'); return result;
   }
-  function makeLocalStore() {
-    var KEY = "xbr2:db", mem = {}, subs = [];
-    try { mem = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { mem = {}; }
-    function persist() { try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) {} }
-    function list(col, field, val) {
-      var out = [];
-      Object.keys(mem).forEach(function (p) {
-        var i = p.indexOf("/"); if (p.slice(0, i) !== col) return;
-        var d = mem[p]; if (d[field] === val) out.push(Object.assign({ id: p.slice(i + 1) }, JSON.parse(JSON.stringify(d))));
-      });
-      return out;
-    }
-    function notify() { subs.forEach(function (s) { s.cb(list(s.col, s.field, s.val)); }); }
-    return {
-      mode: "local",
-      get: async function (p) { var d = mem[p]; return d ? Object.assign({ id: p.split("/")[1] }, JSON.parse(JSON.stringify(d))) : null; },
-      set: async function (p, d) { mem[p] = JSON.parse(JSON.stringify(d)); persist(); notify(); },
-      claim: async function () { return true; },
-      watch: function (col, field, val, cb) {
-        var s = { col: col, field: field, val: val, cb: cb }; subs.push(s);
-        setTimeout(function () { cb(list(col, field, val)); }, 0);
-        return function () { subs = subs.filter(function (x) { return x !== s; }); };
-      }
-    };
-  }
-  async function initStore() {
-    var db = null;
-    try { if (window.claude && window.claude.use) db = await window.claude.use("db"); } catch (e) { db = null; }
-    store = db ? makeDbStore(db) : makeLocalStore();
-    return store;
-  }
-  var ready = initStore();
-
+  var store = {mode:'shared',get:async function(path){return (await api('get',{path:path})).data;},set:function(path,data){return api('set',{path:path,data:data});},watch:function(col,field,val,cb,err){var stopped=false,busy=false;async function poll(){if(stopped||busy)return;busy=true;try{var r=await api('list',{col:col,field:field,val:val});if(!stopped)cb(r.data);}catch(e){if(!stopped&&err)err(e);}finally{busy=false;}}poll();var timer=setInterval(poll,12000);return function(){stopped=true;clearInterval(timer);};}};
   /* ---------- State ---------- */
   var S = { me: null, prog: null, reviews: {}, students: [], allReviews: {}, tab: "home", view: null, sub: "all", quiz: null, auth: { kind: "student", reg: false, teacher: "", err: "" }, unsub: [], queue: Promise.resolve() };
 
@@ -534,9 +495,7 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
 
   /* ---------- Auth ---------- */
   function cleanup() { S.unsub.forEach(function (u) { try { u(); } catch (e) {} }); S.unsub = []; }
-  function setSession(o) { try { if (o) localStorage.setItem("xbr2:session", JSON.stringify(o)); else localStorage.removeItem("xbr2:session"); } catch (e) {} }
-  function getSession() { try { return JSON.parse(localStorage.getItem("xbr2:session")); } catch (e) { return null; } }
-
+  function setSession() {} // Telegram is the only identity source.
   async function enterStudent(acct) {
     cleanup();
     var prog = await store.get("progress/" + acct.id);
@@ -569,84 +528,15 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
     setSession({ role: "teacher", id: tid });
     render();
   }
-  function logout() { cleanup(); S.me = null; S.prog = null; setSession(null); S.auth.err = ""; render(); }
-
-  async function doStudentLogin(name, pw) {
-    await ready;
-    var id = "s" + (await sha("name:" + normName(name))).slice(0, 24);
-    var acct = await store.get("accounts/" + id);
-    var h = await sha("xbr:" + id + ":" + pw);
-    if (!acct || acct.hash !== h) throw new Error("Неверное имя или пароль.");
-    await enterStudent(acct);
+  function logout(){cleanup();S.me=null;S.prog=null;renderLogin();}
+  async function connect(){
+    try{cloudMe=await api('me');S.auth.err='';if(cloudMe.role==='teacher')enterTeacher(cloudMe.id);else if(cloudMe.role==='student')await enterStudent(cloudMe);else renderLogin();}
+    catch(e){S.auth.err=e.message;renderLogin();}
   }
-  async function doRegister(name, pw, teacher) {
-    await ready;
-    var id = "s" + (await sha("name:" + normName(name))).slice(0, 24);
-    var ok = await store.claim("leases/" + id);
-    if (!ok) throw new Error("Подождите несколько секунд и попробуйте ещё раз.");
-    if (await store.get("accounts/" + id)) throw new Error("Ученик с таким именем уже есть. Войдите или добавьте к имени фамилию.");
-    var acct = { role: "student", name: name.trim(), teacher: teacher, hash: await sha("xbr:" + id + ":" + pw), created: nowIso() };
-    await store.set("accounts/" + id, acct);
-    await store.set("progress/" + id, emptyProg(id, acct.name, teacher));
-    await enterStudent(Object.assign({ id: id }, acct));
-  }
-  async function doTeacherLogin(tid, pw) {
-    await ready;
-    var h = await sha("xbr:" + tid + ":" + pw);
-    if (h !== TEACH[tid].hash) throw new Error("Неверный пароль.");
-    enterTeacher(tid);
-  }
-
-  /* ---------- Views: login ---------- */
-  function renderLogin() {
-    var A = S.auth, mode = store ? store.mode : null;
-    var h = '<div class="login"><div class="logo">' + LOGO + '</div>' +
-      '<div class="stack" style="gap:6px"><h1>XBR</h1><p class="muted">Химия и биология: конспекты, тесты, домашние задания и прогресс.</p></div>' +
-      '<div class="seg"><button data-kind="student" class="' + (A.kind === "student" ? "on" : "") + '">Я ученик</button><button data-kind="teacher" class="' + (A.kind === "teacher" ? "on" : "") + '">Я учитель</button></div>';
-    h += '<form id="lf" class="stack" style="gap:12px">';
-    if (A.kind === "teacher") {
-      h += '<span class="label">Кто вы</span><div class="pick">' + Object.keys(TEACH).map(function (k) {
-        return '<button type="button" data-t="' + k + '" class="' + (A.teacher === k ? "on" : "") + '"><span class="avatar">' + TEACH[k].name.charAt(0) + '</span>' + TEACH[k].name + '</button>';
-      }).join("") + '</div>' +
-        '<div class="field"><label class="label" for="pw">Пароль учителя</label><input type="password" id="pw" autocomplete="current-password"></div>';
-    } else {
-      h += '<div class="field"><label class="label" for="nm">Ваше имя</label><input type="text" id="nm" maxlength="40" autocomplete="username" placeholder="Например, Анна Петрова"></div>' +
-        '<div class="field"><label class="label" for="pw">Пароль</label><input type="password" id="pw" autocomplete="' + (A.reg ? "new-password" : "current-password") + '" placeholder="' + (A.reg ? "Придумайте пароль, от 4 символов" : "Ваш пароль") + '"></div>';
-      if (A.reg) {
-        h += '<span class="label">Ваш учитель</span><div class="pick">' + Object.keys(TEACH).map(function (k) {
-          return '<button type="button" data-t="' + k + '" class="' + (A.teacher === k ? "on" : "") + '"><span class="avatar">' + TEACH[k].name.charAt(0) + '</span>' + TEACH[k].name + '</button>';
-        }).join("") + '</div>';
-      }
-    }
-    if (A.err) h += '<div class="err" role="alert">' + esc(A.err) + '</div>';
-    h += '<button class="btn" type="submit" id="go">' + (A.kind === "student" && A.reg ? "Создать аккаунт" : "Войти") + '</button>';
-    if (A.kind === "student") h += '<button type="button" class="back" id="tg">' + (A.reg ? "Уже есть аккаунт? Войти" : "Первый раз? Зарегистрироваться") + '</button>';
-    h += '</form>';
-    if (mode === "local") h += '<div class="info">Тестовый режим: общее хранилище недоступно, поэтому данные сохраняются только на этом устройстве и учитель их не увидит.</div>';
-    h += '</div>';
-    root.innerHTML = h;
-
-    on(".seg [data-kind]", function () { A.kind = this.getAttribute("data-kind"); A.err = ""; A.reg = false; renderLogin(); });
-    on("[data-t]", function () { A.teacher = this.getAttribute("data-t"); A.err = ""; keepFields(); });
-    var tg = $("tg"); if (tg) tg.addEventListener("click", function () { A.reg = !A.reg; A.err = ""; renderLogin(); });
-    $("lf").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      var pw = $("pw").value, btn = $("go");
-      try {
-        if (A.kind === "teacher") {
-          if (!A.teacher) throw new Error("Выберите, кто вы: Елизавета или Максим.");
-          if (!pw) throw new Error("Введите пароль.");
-          btn.disabled = true; await doTeacherLogin(A.teacher, pw);
-        } else {
-          var nm = $("nm").value.trim();
-          if (nm.length < 2) throw new Error("Введите имя (не короче 2 символов).");
-          if (pw.length < 4) throw new Error("Пароль должен быть не короче 4 символов.");
-          if (A.reg && !A.teacher) throw new Error("Выберите учителя: Елизавету или Максима.");
-          btn.disabled = true;
-          if (A.reg) await doRegister(nm, pw, A.teacher); else await doStudentLogin(nm, pw);
-        }
-      } catch (er) { A.err = er && er.message ? er.message : "Не получилось. Попробуйте ещё раз."; renderLogin(); }
-    });
+  function renderLogin(){
+    root.innerHTML='<div class="login"><div class="logo">'+LOGO+'</div><h1>XBR 2.0</h1><p class="muted">Химия и биология • ЕГЭ 2027 • Telegram Edition</p>'+(S.auth.err?'<div class="err">'+esc(S.auth.err)+'</div>':'')+(cloudMe&&cloudMe.role==='new'?'<div class="card stack"><h3>Привет, '+esc(cloudMe.name)+'!</h3><p>Введи код приглашения преподавателя.</p><input type="text" id="invite" autocomplete="off" placeholder="Код приглашения"><button class="btn" id="join">Присоединиться</button><p class="small muted">Имя и Telegram ID используются для сохранения результатов и доступа преподавателя.</p><p class="small muted">Ваш Telegram ID: '+esc(cloudMe.telegramId)+'</p></div>':'<button class="btn" id="connect">Войти через Telegram</button>')+'<p class="small muted">Данные хранятся в облаке. Пароль Telegram не нужен.</p></div>';
+    if($('connect'))$('connect').onclick=connect;
+    if($('join'))$('join').onclick=async function(){var code=$('invite').value.trim();this.disabled=true;try{await api('join',{code:code});await connect();}catch(e){S.auth.err=e.message;renderLogin();}};
   }
   function keepFields() {
     var nm = $("nm") ? $("nm").value : "", pw = $("pw") ? $("pw").value : "";
@@ -876,15 +766,7 @@ var DEEP_EXTRA = {"e27_17": [["h", "Хлорид-ионы: три формы з�
 
   /* ---------- Start ---------- */
   renderLogin();
-  ready.then(async function () {
-    renderLogin();
-    var ses = getSession();
-    if (!ses) return;
-    try {
-      if (ses.role === "teacher" && TEACH[ses.id]) enterTeacher(ses.id);
-      else if (ses.role === "student") { var a = await store.get("accounts/" + ses.id); if (a) await enterStudent(a); }
-    } catch (e) {}
-  });
+  connect();
 })();
 </script>
 
