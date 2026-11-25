@@ -462,6 +462,7 @@ GLOSS = GLOSS.concat([["chem", "Атом и электронные конфиг�
     }, function () {}));
     setSession({ role: "student", id: acct.id });
     prog.updated = nowIso(); saveProg();
+    setTimeout(syncExams,0);
     render();
   }
   function enterTeacher(tid) {
@@ -500,11 +501,11 @@ GLOSS = GLOSS.concat([["chem", "Атом и электронные конфиг�
     var t = S.me.role === "teacher" ? '<span class="chip">учитель</span>' : "";
     return '<header class="top"><div class="brand">' + LOGO + 'XBR</div><div class="who"><div class="avatar">' + esc(S.me.name.charAt(0).toUpperCase()) + '</div><span class="n">' + esc(S.me.name) + '</span>' + t + '<button class="ghost" id="out">Выйти</button></div></header>';
   }
-  ICON.assign = ICON.hw; ICON.tools = ICON.gloss; ICON.variants = ICON.tests;
+  ICON.assign = ICON.hw; ICON.tools = ICON.gloss; ICON.variants = ICON.tests; ICON.analytics = ICON.tests;
   function tabs() {
     var t = S.me.role === "teacher"
-      ? [["students", "Ученики"], ["assign", "Задания"], ["notes", "Конспекты"], ["variants", "Варианты"], ["tools", "Инструменты"]]
-      : [["home", "Главная"], ["notes", "Конспекты"], ["tests", "Тесты"], ["hw", "ДЗ"], ["assign", "Учитель"], ["variants", "Варианты"], ["tools", "Инструменты"]];
+      ? [["students", "Ученики"], ["assign", "Задания"], ["notes", "Конспекты"], ["variants", "Варианты"], ["analytics", "Статистика"], ["tools", "Инструменты"]]
+      : [["home", "Главная"], ["notes", "Конспекты"], ["tests", "Тесты"], ["hw", "ДЗ"], ["assign", "Учитель"], ["variants", "Варианты"], ["analytics", "Статистика"], ["tools", "Инструменты"]];
     return '<div class="tabs"><nav>' + t.map(function (x) { return '<button data-tab="' + x[0] + '" class="' + (S.tab === x[0] ? "on" : "") + '">' + ICON[x[0]] + x[1] + '</button>'; }).join("") + '</nav></div>';
   }
   function filter() {
@@ -634,6 +635,7 @@ GLOSS = GLOSS.concat([["chem", "Атом и электронные конфиг�
     if (!p) { S.view = null; return vStudents(); }
     var st = stats(p);
     var h = '<div class="stack"><button class="back" id="bk">← Все ученики</button><h1>' + esc(p.name) + '</h1><p class="muted small">Последняя активность: ' + fmtDate(p.updated) + '</p>';
+    h += '<button class="btn alt" data-an-open="'+esc(p.id)+'">Статистика пробников</button>';
     h += '<button class="btn alt" id="rename-student">Изменить имя ученика</button>';
     h += '<div class="hero"><span class="label">Общий прогресс</span><span class="num" style="font-size:2.4rem">' + st.all + '%</span><div class="bar"><i style="width:' + st.all + '%"></i></div></div>';
     ["chem", "bio"].forEach(function (s) {
@@ -662,7 +664,8 @@ GLOSS = GLOSS.concat([["chem", "Атом и электронные конфиг�
   function render() {
     if (!S.me) { renderLogin(); return; }
     var T = S.me.role === "teacher", body;
-    if (S.tab === "variants") body = examView();
+    if (S.tab === "analytics") body = analyticsView();
+    else if (S.tab === "variants") body = examView();
     else if (S.tab === "tools") body = vTools();
     else if (S.tab === "assign") body = vAssign();
     else if (T) body = S.tab === "students" ? vStudents() : S.tab === "notes" ? vNotes() : vGloss();
@@ -670,13 +673,15 @@ GLOSS = GLOSS.concat([["chem", "Атом и электронные конфиг�
     root.innerHTML = '<div class="app">' + top() + body + '</div>' + tabs();
     bind();
   }
-  function go(tab) { if(tab==="assign"){A.view=null;A.error="";A.items=null;loadAssignments();} S.tab = tab; S.view = null; S.quiz = null; render(); window.scrollTo(0, 0); }
+  function go(tab) { if(tab==="analytics"){AN.seq++;AN.target=null;AN.data=null;AN.error="";AN.busy=false;} if(tab==="assign"){A.view=null;A.error="";A.items=null;loadAssignments();} S.tab = tab; S.view = null; S.quiz = null; render(); window.scrollTo(0, 0); }
   function on(sel, fn) { var els = root.querySelectorAll(sel); for (var i = 0; i < els.length; i++) els[i].addEventListener("click", fn); }
 
   function bind() {
     if(S.tab==="assign") bindAssign();
     if(S.tab==="tools") bindTools();
     if(S.tab==="variants") examBind();
+    if(S.tab==="analytics") analyticsBind();
+    on("[data-an-open]",function(){var target=this.dataset.anOpen;go("analytics");analyticsLoad(target);});
     on("#rename-student", async function(){var name=prompt("Новое имя ученика");if(!name)return;try{await api("rename_student",{sid:S.view,name:name});toast("Имя сохранено");}catch(e){toast(e.message);}});
     on("#out", logout);
     on("[data-tab]", function () { go(this.getAttribute("data-tab")); });
@@ -806,16 +811,51 @@ GLOSS = GLOSS.concat([["chem", "Атом и электронные конфиг�
   function examCount(s){return s==='chem'?34:28;}
   function examValid(r,s,n){return r&&r.subject===s&&r.number===n&&Array.isArray(r.items)&&r.items.length===examCount(s)&&r.answers&&Number.isFinite(r.deadline)&&!r.finished;}
   function examActive(){return 'active:'+(E.subject||'chem')+':'+(E.number||1);}
-  function examFinish(r){if(r.finished)return;r.finished=true;r.score=r.items.reduce((a,x,i)=>a+(!x.long&&examNorm(r.answers[i])===examNorm(x.a)?1:0),0);var history=examLoad('history',[]);history.unshift(r);examSave('history',history.slice(0,100));examSave(examActive(),{});E.result=r;}
+  function examFinish(r){if(r.finished)return;r.finished=true;r.score=r.items.reduce((a,x,i)=>a+(!x.long&&examNorm(r.answers[i])===examNorm(x.a)?1:0),0);var history=examLoad('history',[]);history.unshift(r);examSave('history',history.slice(0,100));examSave(examActive(),{});E.result=r;if(S.me.role==='student')queueExam(r);}
   function examView(){var r=examLoad(examActive(),{});if(E.number&&!examValid(r,E.subject||'chem',E.number))r={};var history=examLoad('history',[]),head='<div class="stack"><button class="back" id="ex-list">← К вариантам</button><h1>Варианты ЕГЭ</h1>';if(!E.result&&E.number&&r.items&&Date.now()>=r.deadline){examFinish(r);r={};}if(E.result){r=E.result;return head+'<div class="hero"><h2>Результат части 1</h2><span class="num">'+r.score+' / '+(r.subject==='chem'?28:21)+'</span><p>Число верных ответов, не первичные баллы ЕГЭ. Часть 2 — самопроверка или проверка учителем.</p></div><button class="btn alt" id="ex-close">К вариантам</button>'+r.items.map((x,i)=>'<div class="card stack"><h3>'+(i+1)+'. '+esc(x.topic)+'</h3><p>'+esc(x.t)+'</p><p>Ваш ответ: '+esc(r.answers[i]||'Нет ответа')+'</p><p><b>'+(x.long?'Образец решения':'Правильный ответ')+':</b> '+esc(x.a)+'</p></div>').join('')+'</div>';}
   if(E.number&&r.items){
     var i=Math.max(0,Math.min(r.items.length-1,Number(r.position)||0)),x=r.items[i],split=r.subject==='chem'?28:21;
     var nav=r.items.map((q,j)=>'<button type="button" class="exnum '+(j===i?'current ':'')+(String(r.answers[j]||'').trim()?'answered ':'')+(j>=split?'written':'')+'" data-ex-nav="'+j+'" aria-label="Задание '+(j+1)+'" '+(j===i?'aria-current="step"':'')+'>'+(j+1)+'</button>').join('');
     return head+'<div class="card stack"><h2>Вариант № '+r.number+' · '+(r.subject==='chem'?'Химия':'Биология')+'</h2><div class="row"><b id="ex-clock"></b><span id="ex-progress"></span></div><p class="muted">Всего '+r.items.length+' заданий: '+split+' в первой части и '+(r.items.length-split)+' во второй.</p><div class="exgrid">'+nav+'</div><p class="small muted">Выберите любой номер, включая задания второй части.</p></div><div class="card stack" id="ex-q-'+i+'"><p class="muted">Часть '+(i<split?'1 · Краткий ответ':'2 · Развёрнутый ответ')+'</p><h2>Задание '+(i+1)+' из '+r.items.length+'</h2><h3>'+esc(x.topic)+'</h3><p style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(x.t)+'</p>'+(x.long?'<textarea rows="6"':'<input type="text" autocomplete="off"')+' data-ex-field="'+i+'" placeholder="'+(x.long?'Запишите решение':'Ответ')+'"'+(x.long?'>'+esc(r.answers[i]||'')+'</textarea>':' value="'+esc(r.answers[i]||'')+'">')+'<div class="row" style="gap:8px"><button class="btn alt" data-ex-nav="'+(i-1)+'" '+(i===0?'disabled':'')+'>← Назад</button><button class="btn" data-ex-nav="'+(i+1)+'" '+(i===r.items.length-1?'disabled':'')+'>Далее →</button></div></div><button class="btn alt" id="ex-finish">Завершить вариант</button></div>';
   }
-  var s=E.subject||'chem';return '<div class="stack"><h1>Варианты ЕГЭ</h1><p class="muted small">XBR 2.8.5 · Химия 34 / Биология 28</p><div class="info">Авторские тренировки по типам ЕГЭ. Схемы в части заданий текстовые; сложность упрощена. <a href="https://chem-ege.sdamgia.ru/test?id=8478480" target="_blank" rel="noopener">Демоверсия химии 2027</a> · <a href="https://bio-ege.sdamgia.ru/test?id=7327365" target="_blank" rel="noopener">Демоверсия биологии 2027</a></div><div class="seg"><button data-ex-sub="chem" class="'+(s==='chem'?'on':'')+'">Химия</button><button data-ex-sub="bio" class="'+(s==='bio'?'on':'')+'">Биология</button></div><p class="muted">10 фиксированных авторских тренировок по предмету. Не официальные варианты и не копия Решу ЕГЭ. Задания в том числе однотипные.</p>'+EX_BANK[s].map((items,i)=>{var n=i+1,active=examLoad('active:'+s+':'+n,{}),last=history.find(x=>x.subject===s&&x.number===n);return '<div class="card stack"><h3>Вариант № '+n+'</h3><p>'+items.length+' заданий · 235 минут</p><p class="muted">'+(examValid(active,s,n)?'В процессе':last?'Решён · '+last.score+'/'+(s==='chem'?28:21):'Не начат')+'</p><button class="btn" data-ex-start="'+n+'">'+(examValid(active,s,n)?'Продолжить':last?'Решить снова':'Начать')+'</button>'+(S.me.role==='teacher'?'<button class="btn alt" data-ex-assign="'+n+'">Назначить ученикам</button>':'')+'</div>';}).join('')+'<h2>История на этом устройстве</h2>'+history.map((a,i)=>'<button class="item" data-ex-history="'+i+'">'+(a.subject==='chem'?'Химия':'Биология')+' · № '+a.number+' · '+a.score+'/'+(a.subject==='chem'?28:21)+'</button>').join('')+'</div>';}
+  var s=E.subject||'chem';return '<div class="stack"><h1>Варианты ЕГЭ</h1><p class="muted small">XBR 2.9 · Химия 34 / Биология 28</p><div class="info">Авторские тренировки по типам ЕГЭ. Схемы в части заданий текстовые; сложность упрощена. <a href="https://chem-ege.sdamgia.ru/test?id=8478480" target="_blank" rel="noopener">Демоверсия химии 2027</a> · <a href="https://bio-ege.sdamgia.ru/test?id=7327365" target="_blank" rel="noopener">Демоверсия биологии 2027</a></div><div class="seg"><button data-ex-sub="chem" class="'+(s==='chem'?'on':'')+'">Химия</button><button data-ex-sub="bio" class="'+(s==='bio'?'on':'')+'">Биология</button></div><p class="muted">10 фиксированных авторских тренировок по предмету. Не официальные варианты и не копия Решу ЕГЭ. Задания в том числе однотипные.</p>'+EX_BANK[s].map((items,i)=>{var n=i+1,active=examLoad('active:'+s+':'+n,{}),last=history.find(x=>x.subject===s&&x.number===n);return '<div class="card stack"><h3>Вариант № '+n+'</h3><p>'+items.length+' заданий · 235 минут</p><p class="muted">'+(examValid(active,s,n)?'В процессе':last?'Решён · '+last.score+'/'+(s==='chem'?28:21):'Не начат')+'</p><button class="btn" data-ex-start="'+n+'">'+(examValid(active,s,n)?'Продолжить':last?'Решить снова':'Начать')+'</button>'+(S.me.role==='teacher'?'<button class="btn alt" data-ex-assign="'+n+'">Назначить ученикам</button>':'')+'</div>';}).join('')+'<h2>История на этом устройстве</h2>'+history.map((a,i)=>'<button class="item" data-ex-history="'+i+'">'+(a.subject==='chem'?'Химия':'Биология')+' · № '+a.number+' · '+a.score+'/'+(a.subject==='chem'?28:21)+'</button>').join('')+'</div>';}
   function examBind(){var r=examLoad(examActive(),{});on('[data-ex-sub]',function(){E.subject=this.dataset.exSub;E.number=null;E.result=null;render();});on('#ex-list',()=>{E.number=null;E.result=null;render();});on('[data-ex-start]',function(){var s=E.subject||'chem',n=Number(this.dataset.exStart);E.number=n;E.result=null;var saved=examLoad(examActive(),{});if(!examValid(saved,s,n)){if(saved.items)examSave('archive:'+s+':'+n+':'+Date.now(),saved);examSave(examActive(),{subject:s,number:n,minutes:235,deadline:Date.now()+235*60000,items:examGenerate(s,n),answers:{},position:0});}render();window.scrollTo(0,0);});function progress(){var el=$('ex-progress');if(el&&r.items)el.textContent=r.items.filter((_,i)=>String(r.answers[i]||'').trim()).length+' / '+r.items.length+' отвечено';}progress();document.querySelectorAll('[data-ex-field]').forEach(el=>el.oninput=()=>{var i=Number(el.dataset.exField);r.answers[i]=el.value;examSave(examActive(),r);progress();var b=document.querySelector('.exnum[data-ex-nav="'+i+'"]');if(b)b.classList.toggle('answered',!!el.value.trim());});on('[data-ex-nav]',function(){var i=Number(this.dataset.exNav);if(!r.items||i<0||i>=r.items.length)return;r.position=i;examSave(examActive(),r);render();var el=$('ex-q-'+i);if(el)el.scrollIntoView({block:'start'});});on('#ex-finish',()=>{if(confirm('Завершить вариант?')){examFinish(r);render();}});on('#ex-close',()=>{E.result=null;E.number=null;render();});on('[data-ex-history]',function(){E.result=examLoad('history',[])[Number(this.dataset.exHistory)];render();});on('[data-ex-assign]',function(){var s=E.subject||'chem',n=Number(this.dataset.exAssign),items=examGenerate(s,n);go('assign');A.view='new';A.error='';A.teacherPhoto='';A.selected=new Map();render();$('a-title').value='Экзаменационный вариант № '+n;$('a-subject').value=s;$('a-subject').dispatchEvent(new Event('change'));$('a-text').value='Время: 235 мин. Запишите ответы и решения.\n\n'+items.map((x,i)=>(i+1)+'. '+x.t).join('\n\n');});}
   setInterval(()=>{if(!S.me||S.tab!=='variants'||!E.number)return;var r=examLoad(examActive(),{}),el=$('ex-clock');if(!r.items||!el)return;var t=Math.max(0,Math.ceil((r.deadline-Date.now())/1000));el.textContent=Math.floor(t/3600)+':'+String(Math.floor(t/60)%60).padStart(2,'0')+':'+String(t%60).padStart(2,'0');if(!t){examFinish(r);render();}},500);
+
+  var AN={target:null,data:null,error:'',busy:false,subject:'chem',seq:0};
+  var syncBusy=false;
+  function pendingKey(id){return 'xbr29:pending:'+id;}
+  function pendingRead(id){try{return JSON.parse(localStorage.getItem(pendingKey(id)))||[];}catch(e){return [];}}
+  function pendingWrite(id,rows){localStorage.setItem(pendingKey(id),JSON.stringify(rows));}
+  function queueExam(r){
+    var key=EX_BANK[r.subject]&&EX_BANK[r.subject][r.number-1], count=r.subject==='chem'?28:21;
+    if(!key||r.items.length!==key.length||!r.items.every((x,i)=>x.t===key[i][1]&&x.a===key[i][2])){toast('Старая версия варианта: результат остался на устройстве');return;}
+    try{var id=S.me.id, rows=pendingRead(id);rows.push({attemptId:crypto.randomUUID(),bank:'284',subject:r.subject,number:r.number,answers:Array.from({length:count},(_,i)=>String(r.answers[i]||'').slice(0,2000))});pendingWrite(id,rows);syncExams();}catch(e){toast('Не удалось поставить результат в очередь синхронизации');}
+  }
+  async function syncExams(){if(syncBusy||!S.me||S.me.role!=='student')return;var id=S.me.id;syncBusy=true;try{while(S.me&&S.me.id===id){var rows=pendingRead(id);if(!rows.length)break;var row=rows[0];await api('exam_record',row);pendingWrite(id,pendingRead(id).filter(x=>x.attemptId!==row.attemptId));}}catch(e){/* Retain queued attempts for retry. */}finally{syncBusy=false;}}
+  setInterval(syncExams,30000);
+  async function analyticsLoad(target){var seq=++AN.seq;AN.target=target;AN.busy=true;AN.data=null;AN.error='';render();try{if(S.me.role==='student')await syncExams();var r=await api('analytics',{sid:target});if(seq!==AN.seq)return;AN.data=r.data;}catch(e){if(seq!==AN.seq)return;AN.error='Не удалось загрузить облачную статистику: '+e.message;}finally{if(seq===AN.seq){AN.busy=false;if(S.tab==='analytics')render();}}}
+  function analyticsView(){var teacher=S.me.role==='teacher',h='<div class="stack"><h1>Статистика</h1><p class="muted small">XBR 2.9 · Облачные результаты</p>';
+    if(teacher){h+='<h2>Ученики</h2>'+S.students.map(p=>'<button class="item" data-an-student="'+esc(p.id)+'"><span class="t"><b>'+esc(p.name)+'</b></span></button>').join('');if(!AN.target)return h+'<p class="muted">Выберите ученика.</p></div>';var p=S.students.find(x=>x.id===AN.target);h+='<h2>'+esc(p?p.name:'Ученик')+'</h2>';}
+    else h+='<p class="muted">Ожидают синхронизации: '+pendingRead(S.me.id).length+'</p>';
+    h+='<button class="btn alt" id="an-refresh">Обновить статистику</button>';
+    if(AN.busy)return h+'<p>Загрузка…</p></div>';if(AN.error)return h+'<div class="info">'+esc(AN.error)+'</div></div>';if(!AN.data)return h+'<p>Нажмите «Обновить статистику».</p></div>';
+    var data=AN.data, all=data.exams||[], hw=data.homework||[], avg=hw.length?Math.round(hw.reduce((a,x)=>a+x.score,0)/hw.length):null;
+    h+='<div class="card"><h3>Домашние задания преподавателя</h3><p>Проверено с оценкой: '+hw.length+' · Средний балл: '+(avg===null?'—':avg+' / 100')+'</p></div>';
+    h+='<div class="seg">'+['chem','bio'].map(s=>'<button data-an-sub="'+s+'" class="'+(AN.subject===s?'on '+s:'')+'">'+SUBJ[s]+'</button>').join('')+'</div>';
+    var s=AN.subject, rows=all.filter(x=>x.subject===s), count=s==='chem'?28:21;
+    if(!rows.length)return h+'<div class="card"><h3>Пока нет облачных пробников</h3><p>Новые завершённые варианты появятся после синхронизации.</p></div></div>';
+    var mean=Math.round(rows.reduce((a,x)=>a+x.score/x.total*100,0)/rows.length), unique=new Set(rows.map(x=>x.number)).size;
+    h+='<div class="hero"><span class="label">Средняя точность первой части</span><span class="num">'+mean+'%</span><p>Попыток: '+rows.length+' · Вариантов: '+unique+' / 10</p></div><div class="card"><h3>Динамика · последние 12 попыток</h3>';
+    var recent=rows.slice(0,12).reverse();h+='<svg viewBox="0 0 320 130" width="100%" role="img" aria-label="Динамика точности от 0 до 100 процентов">';[0,25,50,75,100].forEach(n=>{var y=110-n;h+='<line x1="30" x2="310" y1="'+y+'" y2="'+y+'" stroke="currentColor" opacity=".15"/><text x="26" y="'+(y+3)+'" font-size="9" text-anchor="end" fill="currentColor">'+n+'</text>';});var pts=recent.map((x,i)=>[recent.length===1?170:35+i*270/(recent.length-1),110-x.score/x.total*100]);h+='<polyline points="'+pts.map(x=>x.join(',')).join(' ')+'" fill="none" stroke="currentColor" stroke-width="2"/>'+pts.map(x=>'<circle cx="'+x[0]+'" cy="'+x[1]+'" r="3" fill="currentColor"/>').join('')+'</svg></div>';
+    var by=Array.from({length:count},(_,i)=>({i,pct:Math.round(rows.reduce((a,x)=>a+(x.marks[i]||0),0)/rows.length*100)}));var weak=by.filter(x=>x.pct<60).sort((a,b)=>a.pct-b.pct).slice(0,3);
+    h+='<div class="card"><h3>Рекомендации</h3><p>'+ (weak.length?'Повторить задания № '+weak.map(x=>x.i+1).join(', ')+'.':'Нет номеров с точностью ниже 60%.')+'</p><p class="muted small">'+(rows.length<3?'Мало попыток для устойчивых выводов.':'По результатам доступных попыток.')+'</p></div><h2>Точность по номерам</h2>';
+    h+=by.map(x=>'<div class="card"><div class="row"><b>№ '+(x.i+1)+'</b><span>'+x.pct+'%</span></div><div class="bar"><i style="width:'+x.pct+'%"></i></div></div>').join('');
+    h+='<h2>История</h2>'+rows.map(x=>'<div class="item"><span class="t"><b>Вариант № '+x.number+'</b><small>'+esc(fmtDate(x.at))+' · '+x.score+' / '+x.total+'</small></span></div>').join('');
+    return h+'<p class="muted small">До 100 последних синхронизированных попыток по двум предметам. Баллы отражают число верных кратких ответов, не баллы ЕГЭ. Вторая часть не оценивается. Дата — время синхронизации.</p></div>';
+  }
+  function analyticsBind(){on('[data-an-student]',function(){analyticsLoad(this.dataset.anStudent);});on('#an-refresh',()=>analyticsLoad(AN.target||S.me.id));on('[data-an-sub]',function(){AN.subject=this.dataset.anSub;render();});if(S.me.role==='student'&&!AN.target&&!AN.busy){setTimeout(()=>{if(S.tab==='analytics'&&!AN.target)analyticsLoad(S.me.id);},0);}}
+
   /* ---------- Start ---------- */
   renderLogin();
   connect();
